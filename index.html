@@ -137,7 +137,7 @@
         };
 
         // Module Card Component
-        const ModuleCard = ({ module, isLocked, isSelected, onToggle, onCounterChange, counterValue }) => {
+        const ModuleCard = ({ module, isLocked, isSelected, onToggle, onCounterChange, counterValue, onCoreOptionChange, coreOption }) => {
             const [isDetailsOpen, setIsDetailsOpen] = useState(false);
             return (
                 <motion.div
@@ -177,6 +177,46 @@
                             </motion.button>
                         )}
                     </div>
+
+                    {module.id === 'core' && (
+                        <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl">
+                            <p className="text-sm font-semibold text-gray-700 mb-3">Paket Seçimi:</p>
+                            <div className="space-y-2">
+                                <motion.button
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    onClick={() => {
+                                        onCoreOptionChange('premium');
+                                        trackEvent('Core_Premium_Selected');
+                                    }}
+                                    className={`w-full p-3 rounded-lg text-left transition-all ${
+                                        coreOption === 'premium' 
+                                            ? 'bg-gradient-to-r from-yellow-400 to-amber-400 text-white shadow-lg' 
+                                            : 'bg-white text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <div className="font-semibold">Premium Paket - 250.000 TL</div>
+                                    <div className="text-xs opacity-90">1 Yıl Destek + Hediye Barkod Okuyucu ve Yazıcı</div>
+                                </motion.button>
+                                <motion.button
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    onClick={() => {
+                                        onCoreOptionChange('standard');
+                                        trackEvent('Core_Standard_Selected');
+                                    }}
+                                    className={`w-full p-3 rounded-lg text-left transition-all ${
+                                        coreOption === 'standard' 
+                                            ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg' 
+                                            : 'bg-white text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <div className="font-semibold">Standart Paket - 90.000 TL</div>
+                                    <div className="text-xs opacity-90">Kurulum + 15.000 TL Aylık Destek</div>
+                                </motion.button>
+                            </div>
+                        </div>
+                    )}
 
                     {module.details && module.details.length > 0 && (
                         <motion.button
@@ -262,14 +302,6 @@
                         </div>
                     )}
 
-                    {isLocked && (
-                        <div className="mt-4 flex items-center gap-2">
-                            <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            <span className="text-sm font-semibold text-green-600">Zorunlu - Aktif</span>
-                        </div>
-                    )}
                     {module.showFreeMonthlyBadge && isSelected && (
                         <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
@@ -277,6 +309,15 @@
                             className="mt-4 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold inline-block"
                         >
                             ✓ Sabit Aylık
+                        </motion.div>
+                    )}
+                    {module.gift && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="mt-4 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold inline-block"
+                        >
+                            🎁 {module.gift}
                         </motion.div>
                     )}
                 </motion.div>
@@ -389,15 +430,33 @@
         const App = () => {
             const [selectedModules, setSelectedModules] = useState(['core']);
             const [warehouseCount, setWarehouseCount] = useState(0);
+            const [coreOption, setCoreOption] = useState('standard'); // 'premium' or 'standard'
+
+            const coreOptions = {
+                premium: {
+                    setupPrice: 250000,
+                    monthlyPrice: 0,
+                    description: 'Premium Paket: 1 Yıl Destek + Hediye Barkod Okuyucu ve Yazıcı (10.000 TL değerinde)',
+                    gift: '1 adet Barkod Okuyucu ve Yazıcı (10.000 TL değerinde)'
+                },
+                standard: {
+                    setupPrice: 90000,
+                    monthlyPrice: 15000,
+                    description: 'Standart Paket: Kurulum + Aylık Destek',
+                    gift: null
+                }
+            };
 
             const modules = [
                 {
                     id: 'core',
                     title: 'Entegre Komuta Merkezi ve ERP',
                     description: 'Geleneksel dağınık yapıyı bitiren ana sistem. %35 zaman tasarrufu, %18 verimlilik artışı. Gerçek zamanlı envanter ve Paraşüt entegrasyonu dahildir.',
-                    setupPrice: 90000,
-                    monthlyPrice: 15000,
+                    setupPrice: coreOptions[coreOption].setupPrice,
+                    monthlyPrice: coreOptions[coreOption].monthlyPrice,
                     type: 'locked',
+                    coreOption: coreOption,
+                    gift: coreOptions[coreOption].gift,
                     details: [
                         'Merkez Depo (WMS): Saniyelik stok ve maliyet takibi',
                         'Finans & Çift Cari: Resmi ve gayriresmi iki ayrı kasa takibi',
@@ -498,6 +557,17 @@
             const handleConfirm = () => {
                 const selectedModuleObjects = modules.filter(m => selectedModules.includes(m.id));
                 let message = `*ERP Teklif - Yunus Bey*\n\n`;
+                
+                const coreModule = selectedModuleObjects.find(m => m.id === 'core');
+                if (coreModule) {
+                    message += `*Paket Seçimi:*\n`;
+                    message += `${coreOption === 'premium' ? 'Premium Paket' : 'Standart Paket'}\n`;
+                    if (coreModule.gift) {
+                        message += `🎁 Hediye: ${coreModule.gift}\n`;
+                    }
+                    message += `\n`;
+                }
+
                 message += `*Seçilen Modüller:*\n`;
                 
                 selectedModuleObjects.forEach(module => {
@@ -505,7 +575,7 @@
                         message += `• ${module.title} (${warehouseCount} adet)\n`;
                         message += `  Kurulum: ${module.setupPrice * warehouseCount.toLocaleString('tr-TR')} TL\n`;
                         message += `  Aylık: ${module.monthlyPrice * warehouseCount.toLocaleString('tr-TR')} TL\n`;
-                    } else {
+                    } else if (module.id !== 'core') {
                         message += `• ${module.title}\n`;
                         message += `  Kurulum: ${module.setupPrice.toLocaleString('tr-TR')} TL\n`;
                         if (module.monthlyPrice > 0) {
@@ -518,8 +588,8 @@
                 });
 
                 message += `*TOPLAM:*\n`;
-                message += `İlk Kurulum: ${totalSetup.toLocaleString('tr-TR')} TL\n`;
-                message += `Aylık Abonelik: ${totalMonthly.toLocaleString('tr-TR')} TL\n\n`;
+                message += `İlk Kurulum: ${totalSetup.toLocaleString('tr-TR')} TL +KDV\n`;
+                message += `Aylık Abonelik: ${totalMonthly.toLocaleString('tr-TR')} TL +KDV\n\n`;
                 message += `Teklifi onaylıyorum, iletişime geçebilirsiniz.`;
 
                 const whatsappUrl = `https://wa.me/905447218974?text=${encodeURIComponent(message)}`;
@@ -555,6 +625,8 @@
                                         onToggle={handleToggle}
                                         onCounterChange={handleCounterChange}
                                         counterValue={warehouseCount}
+                                        onCoreOptionChange={setCoreOption}
+                                        coreOption={coreOption}
                                     />
                                 ))}
                             </div>
